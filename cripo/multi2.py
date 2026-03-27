@@ -5,8 +5,6 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from .cs1 import cs1
-
 ICUB = [
     2030402, 4010505, 3050506, 2010905, 5050809, 5010509, 1071206, 4010912, 6090909, 5011205, 5050915, 3010912,
     5091410, 9011512, 1120509, 2011512, 9051515, 8010915, 5111909, 5010915, 9120916, 5011909, 1091922, 5011509,
@@ -38,6 +36,34 @@ ISTETR = [4020100, 10090805, 18171613, 29262520, 37363432, 49454140, 58535250, 6
 IWTETR = [4040401, 8040408, 4080408, 8081208, 8040804, 4080808, 8080812, 8160408, 8080804, 8160804, 40808]
 
 
+def _unpack_two_digit_table(rows: list[int]) -> list[int]:
+    """Expand legacy packed two-digit table rows into a flat Python list."""
+    values: list[int] = []
+    for row in rows:
+        digits = f"{row:d}"
+        if len(digits) % 2 == 1:
+            digits = "0" + digits
+        values.extend(int(digits[i : i + 2]) for i in range(0, len(digits), 2))
+    return values
+
+
+ICUB_VALUES = _unpack_two_digit_table(ICUB)
+I1_VALUES = _unpack_two_digit_table(I1)
+IWHEX_VALUES = _unpack_two_digit_table(IWHEX)
+ISTETR_VALUES = _unpack_two_digit_table(ISTETR)
+IWTETR_VALUES = _unpack_two_digit_table(IWTETR)
+
+HEXAGONAL_TYPES = {1, 2, 6}
+CUBIC_TYPES = {3, 4, 5}
+GRAPHITE_TYPE = 1
+HEXAGONAL_CLOSE_PACKED_TYPE = 2
+HEXAGONAL_SPECIAL_TYPE = 6
+BODY_CENTERED_CUBIC_TYPE = 3
+FACE_CENTERED_CUBIC_TYPE = 4
+TETRAGONAL_TYPE = 7
+BRAGG_TABLE_OVERFLOW = 103
+
+
 @dataclass
 class Multi2Result:
     """Container for the Bragg-cut energies and multiplicity factors."""
@@ -53,11 +79,11 @@ class Multi2Result:
 def multi2(a: float, c: float, elim: float, indic: int, idim: int) -> Multi2Result:
     """Generate Bragg-cut energies and weights for the requested crystal type."""
     ier = 0
-    if indic in (1, 2, 6):
+    if indic in HEXAGONAL_TYPES:
         return _multi2_hex(a, c, elim, indic, idim, ier)
-    if indic in (3, 4, 5):
+    if indic in CUBIC_TYPES:
         return _multi2_cub(a, elim, indic, idim, ier)
-    if indic == 7:
+    if indic == TETRAGONAL_TYPE:
         return _multi2_tetr(a, c, elim, idim, ier)
     raise ValueError(f"Unsupported crystal type: {indic}")
 
@@ -68,149 +94,154 @@ def _sort_pairs(a1: list[float], b1: list[float]) -> tuple[list[float], list[flo
     return [p[0] for p in pairs], [p[1] for p in pairs]
 
 
+def _find_table_limit(values: list[int], maximum: int, default_limit: int, fallback_limit: float) -> tuple[int, float]:
+    """Return the usable table length and the capped search range."""
+    for index, value in enumerate(values[:default_limit], start=1):
+        if value > maximum:
+            return index - 1, float(maximum)
+    return default_limit, fallback_limit
+
+
+def _append_peak(energies: list[float], weights: list[float], energy: float, weight: float) -> None:
+    """Append one Bragg-cut peak to the output lists."""
+    energies.append(energy)
+    weights.append(weight)
+
+
+def _hexagonal_atom_divisor(crystal_type: int) -> float:
+    """Return the multiplicity divisor for the selected hexagonal structure."""
+    if crystal_type == HEXAGONAL_CLOSE_PACKED_TYPE:
+        return 2.0
+    if crystal_type == HEXAGONAL_SPECIAL_TYPE:
+        return 1.0
+    return 4.0
+
+
+def _hexagonal_l3_rules(crystal_type: int, base_index: int) -> tuple[int, int, int]:
+    """Return stepping and parity factors for the hexagonal/turbostratic loops."""
+    if crystal_type == HEXAGONAL_SPECIAL_TYPE:
+        return 1, 1, 1
+
+    parity_factor = 16 if crystal_type == GRAPHITE_TYPE else 4
+    if base_index % 3 == 0:
+        return 2, parity_factor, 3
+    return 1, 1, 3
+
+
+def _cubic_weight_scale(crystal_type: int) -> float:
+    """Return the crystal-type-dependent multiplicity scale for cubic lattices."""
+    if crystal_type == BODY_CENTERED_CUBIC_TYPE:
+        return 2.0
+    if crystal_type == FACE_CENTERED_CUBIC_TYPE:
+        return 4.0
+    return 1.0
+
+
+def _allowed_cubic_index(is_value: int, crystal_type: int) -> bool:
+    """Check whether a cubic reflection index is allowed for the structure."""
+    if crystal_type == 5:
+        return True
+    if crystal_type == BODY_CENTERED_CUBIC_TYPE:
+        return is_value % 2 == 0
+    return is_value % 8 in (0, 3, 4)
+
+
+def _tetragonal_component(value: int) -> int:
+    """Classify an index by the mod-4 parity bucket used in the original code."""
+    if value % 2 != 0:
+        return 1
+    if value % 4 != 0:
+        return 2
+    return 3
+
+
 def _multi2_hex(a: float, c: float, elim: float, indic: int, idim: int, ier: int) -> Multi2Result:
     """Handle hexagonal and graphite-like crystal structures."""
-    fact = 0.286015e-8 / a
-    fact = fact * fact / 3.0
-    f = elim / fact
-    an = 4.0
-    if indic == 2:
-        an = 2.0
-    if indic == 6:
-        an = 1.0
+    energy_scale = (0.286015e-8 / a) ** 2 / 3.0
+    scaled_limit = elim / energy_scale
+    atom_divisor = _hexagonal_atom_divisor(indic)
+    table_limit, scaled_limit = _find_table_limit(I1_VALUES, int(scaled_limit), default_limit=36, fallback_limit=97.0)
 
-    ismax = int(f)
-    islim = 36
-    for i in range(1, 37):
-        j11, _ = cs1(I1, i, 0)
-        if j11 > ismax:
-            islim = i - 1
-            break
-    else:
-        f = 97.0
-
-    ak = 3.0 * a * a / 4.0 / c / c
+    axial_ratio = 3.0 * a * a / 4.0 / c / c
     v0 = c * a * a * math.sqrt(3.0) / 2.0
-    out_a1: list[float] = []
-    out_b1: list[float] = []
+    energies: list[float] = []
+    weights: list[float] = []
 
-    for iis in range(1, islim + 1):
-        is_value, _ = cs1(I1, iis, 0)
-        iww, _ = cs1(IWHEX, iis, 0)
-        if f < is_value:
+    for base_index, base_weight in zip(I1_VALUES[:table_limit], IWHEX_VALUES[:table_limit]):
+        if scaled_limit < base_index:
             continue
-        l3lim = int(math.sqrt((f - is_value) / ak) + 1.0)
-        iu = 1
-        l3par = 1
-        l3non = 1
-        if indic != 6:
-            l3non = 3
-            is1 = is_value - (is_value // 3) * 3
-            if is1 == 0:
-                iu = 2
-                l3par = 16 if indic == 1 else 4
-        for ll3 in range(1, l3lim + 1, iu):
-            l3 = ll3 - 1
-            energy = is_value + ak * l3 * l3
-            if energy <= 0.0 or energy > f:
+        l3_step, even_factor, odd_factor = _hexagonal_l3_rules(indic, base_index)
+        l3_limit = int(math.sqrt((scaled_limit - base_index) / axial_ratio) + 1.0)
+        for l3 in range(0, l3_limit, l3_step):
+            scaled_energy = base_index + axial_ratio * l3 * l3
+            if scaled_energy <= 0.0 or scaled_energy > scaled_limit:
                 continue
-            iform = l3par if l3 % 2 == 0 else l3non
-            multi = iww * iform
+            structure_factor = even_factor if l3 % 2 == 0 else odd_factor
+            multi = base_weight * structure_factor
             if l3 == 0:
                 multi //= 2
-            out_a1.append(energy * fact)
-            out_b1.append(multi / an)
-            if len(out_a1) >= idim:
-                return Multi2Result(out_a1, out_b1, out_a1[-1], len(out_a1), 103, v0)
+            _append_peak(energies, weights, scaled_energy * energy_scale, multi / atom_divisor)
+            if len(energies) >= idim:
+                return Multi2Result(energies, weights, energies[-1], len(energies), BRAGG_TABLE_OVERFLOW, v0)
 
-    out_a1, out_b1 = _sort_pairs(out_a1, out_b1)
-    last = out_a1[-1] if out_a1 else 0.0
-    return Multi2Result(out_a1, out_b1, last, len(out_a1), ier, v0)
+    energies, weights = _sort_pairs(energies, weights)
+    last = energies[-1] if energies else 0.0
+    return Multi2Result(energies, weights, last, len(energies), ier, v0)
 
 
 def _multi2_cub(a: float, elim: float, indic: int, idim: int, ier: int) -> Multi2Result:
     """Handle simple cubic, BCC, and FCC crystal structures."""
     v0 = a * a * a
-    fact = (0.286015e-8 / a / 2.0) ** 2
-    islim = min(int(elim / fact), 800)
-    f2dn = 1.0
-    if indic == 3:
-        f2dn = 2.0
-    if indic == 4:
-        f2dn = 4.0
+    energy_scale = (0.286015e-8 / a / 2.0) ** 2
+    max_index = min(int(elim / energy_scale), 800)
+    weight_scale = _cubic_weight_scale(indic)
 
-    out_a1: list[float] = []
-    out_b1: list[float] = []
-    for is_value in range(1, islim + 1):
-        if indic != 5:
-            if indic == 3 and is_value % 2 != 0:
-                continue
-            if indic != 3:
-                iresto = is_value % 8
-                if iresto not in (0, 3, 4):
-                    continue
-        j1, _ = cs1(ICUB, is_value, 0)
-        if j1 >= len(MCUB) or MCUB[j1] == 0:
+    energies: list[float] = []
+    weights: list[float] = []
+    for is_value in range(1, max_index + 1):
+        if not _allowed_cubic_index(is_value, indic):
             continue
-        out_a1.append(is_value * fact)
-        out_b1.append(MCUB[j1] * f2dn)
-        if len(out_a1) >= idim:
+        multiplicity_index = ICUB_VALUES[is_value - 1]
+        if multiplicity_index >= len(MCUB) or MCUB[multiplicity_index] == 0:
+            continue
+        _append_peak(energies, weights, is_value * energy_scale, MCUB[multiplicity_index] * weight_scale)
+        if len(energies) >= idim:
             break
 
-    last = out_a1[-1] if out_a1 else 0.0
-    return Multi2Result(out_a1, out_b1, last, len(out_a1), ier, v0)
+    last = energies[-1] if energies else 0.0
+    return Multi2Result(energies, weights, last, len(energies), ier, v0)
 
 
 def _multi2_tetr(a: float, c: float, elim: float, idim: int, ier: int) -> Multi2Result:
     """Handle the tetragonal tin case from the original implementation."""
-    fact = (0.5 * 0.286015e-8 / a) ** 2
-    f = elim / fact
-    ismax = int(f)
-    islim = 43
-    for i in range(1, 44):
-        j11, _ = cs1(ISTETR, i, 0)
-        if j11 > ismax:
-            islim = i - 1
-            break
-    else:
-        f = 98.0
+    energy_scale = (0.5 * 0.286015e-8 / a) ** 2
+    scaled_limit = elim / energy_scale
+    table_limit, scaled_limit = _find_table_limit(ISTETR_VALUES, int(scaled_limit), default_limit=43, fallback_limit=98.0)
 
-    ak = a * a / c / c
+    axial_ratio = a * a / c / c
     v0 = a * a * c
-    out_a1: list[float] = []
-    out_b1: list[float] = []
+    energies: list[float] = []
+    weights: list[float] = []
 
-    for iis in range(1, islim + 1):
-        is_value, _ = cs1(ISTETR, iis, 0)
-        iww, _ = cs1(IWTETR, iis, 0)
-        icomp1 = 1
-        if is_value % 2 == 0:
-            icomp1 = 2
-            if is_value % 4 == 0:
-                icomp1 = 3
-        if f < is_value:
+    for base_index, base_weight in zip(ISTETR_VALUES[:table_limit], IWTETR_VALUES[:table_limit]):
+        if scaled_limit < base_index:
             continue
-        l3lim = int(math.sqrt((f - is_value) / ak) + 1.0)
-        for ll3 in range(1, l3lim + 1):
-            l3 = ll3 - 1
-            icomp2 = 1
-            if l3 % 2 == 0:
-                icomp2 = 2
-                if l3 % 4 == 0:
-                    icomp2 = 3
-            if icomp2 != icomp1:
+        base_component = _tetragonal_component(base_index)
+        l3_limit = int(math.sqrt((scaled_limit - base_index) / axial_ratio) + 1.0)
+        for l3 in range(l3_limit):
+            l3_component = _tetragonal_component(l3)
+            if l3_component != base_component:
                 continue
-            iu = 4 if icomp2 == 1 else 8
+            iu = 4 if l3_component == 1 else 8
             if l3 == 0:
                 iu //= 2
-            energy = is_value + ak * l3 * l3
-            if energy <= 0.0 or energy > f:
+            scaled_energy = base_index + axial_ratio * l3 * l3
+            if scaled_energy <= 0.0 or scaled_energy > scaled_limit:
                 continue
-            out_a1.append(energy * fact)
-            out_b1.append(iww * iu)
-            if len(out_a1) >= idim:
-                return Multi2Result(out_a1, out_b1, out_a1[-1], len(out_a1), 103, v0)
+            _append_peak(energies, weights, scaled_energy * energy_scale, base_weight * iu)
+            if len(energies) >= idim:
+                return Multi2Result(energies, weights, energies[-1], len(energies), BRAGG_TABLE_OVERFLOW, v0)
 
-    out_a1, out_b1 = _sort_pairs(out_a1, out_b1)
-    last = out_a1[-1] if out_a1 else 0.0
-    return Multi2Result(out_a1, out_b1, last, len(out_a1), ier, v0)
+    energies, weights = _sort_pairs(energies, weights)
+    last = energies[-1] if energies else 0.0
+    return Multi2Result(energies, weights, last, len(energies), ier, v0)
