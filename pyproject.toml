@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cripo"
+version = "0.1.0"
+description = "Python port of the CRIPO neutron cross section calculator"
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+    "scipy>=1.11",
+]
+authors = [
+    {name = "CRIPO Python Port Contributors"},
+]
+keywords = ["neutron", "cross-section", "materials", "crystal", "physics"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "License :: Other/Proprietary License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+[tool.setuptools]
+include-package-data = true
+packages = ["cripo"]
+
+[tool.setuptools.package-dir]
+cripo = "."
+
