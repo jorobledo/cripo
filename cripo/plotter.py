@@ -101,7 +101,8 @@ def plot_cross_section_data(
     ax.legend()
     fig.tight_layout()
     fig.savefig(output, dpi=180)
-    return fig
+    plt.close(fig)
+    return output
 
 
 def plot_cross_sections(

@@ -28,8 +28,7 @@ classifiers = [
 
 [tool.setuptools]
 include-package-data = true
-packages = ["cripo"]
 
-[tool.setuptools.package-dir]
-cripo = "."
-
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cripo"]
