@@ -48,9 +48,8 @@ def run_cripo(inputs: CripoInput, output_dir: str | Path = ".") -> dict[str, obj
     cri_path = output_dir / "CRIPOOUT.CRI"
     dat_path = output_dir / "CRIPOOUT.DAT"
 
-    pi = math.pi
     bcoh = inputs.b_coherent_fm / 10.0
-    sigc = 4.0 * pi * bcoh**2
+    sigc = 4.0 * math.pi * bcoh**2
     if sigc == 0.0:
         sigc = 1.0
     isc = 0
@@ -65,7 +64,7 @@ def run_cripo(inputs: CripoInput, output_dir: str | Path = ".") -> dict[str, obj
     bl = il0 - inputs.lowest_lethargy_exponent + 1.0 / appd
     ndec = inputs.highest_lethargy_exponent - inputs.lowest_lethargy_exponent
     ipun = ndec * inputs.points_per_lethargy_decade + 1
-    ak = math.sqrt(sigc / 4.0 / pi) + bne * inputs.electrons_z / 10.0
+    ak = math.sqrt(sigc / 4.0 / math.pi) + bne * inputs.electrons_z / 10.0
 
     state = EfesState(idim=idim, elim=elim)
     rows: list[dict[str, float]] = []
@@ -112,7 +111,7 @@ def run_cripo(inputs: CripoInput, output_dir: str | Path = ".") -> dict[str, obj
 
             mantissa = _mantissa_from_energy(energ)
             fbar = facfor1(energ, inputs.electrons_z)
-            sigce = 4.0 * pi * (ak - bne * fbar * inputs.electrons_z / 10.0) ** 2
+            sigce = 4.0 * math.pi * (ak - bne * fbar * inputs.electrons_z / 10.0) ** 2
             f1 = efe2 * sigce
             f2 = efe3 * inputs.sigma_incoherent
             f3 = efe5 * inputs.sigma_incoherent
