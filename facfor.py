@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from .interpolation import ali, atsm
+from .scipy_interpolation import interpolate_local_polynomial
 
 
 def facfor(energ: float) -> float:
@@ -33,9 +33,7 @@ def facfor(energ: float) -> float:
         return 0.0
     if al > 6.0:
         return 1.0
-    arg, val = atsm(al, z, f, 16, 1, 5)
-    y, _ = ali(al, arg, val, 5, 1.0e-3)
-    return y
+    return interpolate_local_polynomial(al, z, f, 5)
 
 
 def facfor1(energ: float, iz: int) -> float:

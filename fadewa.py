@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .interpolation import ali, atsm
+from .scipy_interpolation import interpolate_local_polynomial
 
 
 def fadewa(amu: float, debye: float, temp: float) -> tuple[float, int]:
@@ -74,7 +74,6 @@ def fadewa(amu: float, debye: float, temp: float) -> tuple[float, int]:
     if theta > 7.0:
         fi1 = 2.0 * theta
     else:
-        arg, val = atsm(theta, t, f, 26, 1, 10)
-        fi1, ier = ali(theta, arg, val, 10, 1.0e-4)
+        fi1 = interpolate_local_polynomial(theta, t, f, 10)
     fdw = 0.7276358e-14 * fi1 / amu / debye
     return fdw, ier

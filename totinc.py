@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-from .interpolation import ali, atsm
+from .scipy_interpolation import interpolate_local_polynomial
 from .totinc_data import TOTINC_A, TOTINC_B, TOTINC_C
 
 
@@ -48,8 +48,7 @@ def totinc(e: float, amu: float, debye: float, temp: float, ind: int, state: Tot
                         d[k - 1] = TOTINC_A[l - 1]
                 p = min(d)
                 dlog = [math.log10(value - p + 0.1) for value in d]
-                arg, val = atsm(theta, TOTINC_C, dlog, 15, 1, 10)
-                y, ier = ali(theta, arg, val, 10, eps)
+                y = interpolate_local_polynomial(theta, TOTINC_C, dlog, 10)
                 y = p + 10.0**y - 0.1
                 f[j - 1] += y * coef**i
 
@@ -65,8 +64,7 @@ def totinc(e: float, amu: float, debye: float, temp: float, ind: int, state: Tot
     if x < TOTINC_B[0]:
         return 0.0, 101
     if x <= TOTINC_B[34]:
-        arg, val = atsm(x, TOTINC_B, state.f, 36, 1, 10)
-        efe1, ier = ali(x, arg, val, 10, eps)
+        efe1 = interpolate_local_polynomial(x, TOTINC_B, state.f, 10)
         return 10.0**efe1, ier
 
     # The original file uses an undefined UFA1 symbol here. Based on the
