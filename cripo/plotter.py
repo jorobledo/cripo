@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
 
 SERIES = [
@@ -65,7 +66,7 @@ def plot_cross_section_data(
     include_partials: bool = True,
     title: str = "CRIPO Cross Sections",
     x_axis: str = "energy",
-) -> Path:
+) -> Figure:
     """Plot cross sections from an in-memory data dictionary.
 
     The data structure is the same one returned by ``CripoModel`` and
@@ -109,7 +110,7 @@ def plot_cross_sections(
     output_path: str | Path = "CRIPO_cross_sections.png",
     include_partials: bool = True,
     x_axis: str = "energy",
-) -> Path:
+) -> Figure:
     """Read a `.DAT` file and generate a saved cross-section plot from it."""
     data = read_dat(dat_path)
     return plot_cross_section_data(data, output_path=output_path, include_partials=include_partials, x_axis=x_axis)

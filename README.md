@@ -15,7 +15,7 @@ python3 -m pip install -e .
 The usage is as follows,
 
 ```python
-from cripo import CripoModel
+from cripo import CripoModel, CrystalStructure, UnitCell
 
 model = CripoModel(
     name = "Carbon",
@@ -27,11 +27,12 @@ model = CripoModel(
     cell_parameter_a_angstrom=2.46,
     cell_parameter_c_angstrom=6.70,
     atomic_mass_amu=12.0,
-    crystal_type=1,
+    crystal_type=CrystalStructure.GRAPHITE,
     lowest_lethargy_exponent=-3,
     highest_lethargy_exponent=2,
     points_per_lethargy_decade=50,
     electrons_z=6,
+    unit_cell=UnitCell(a_angstrom=2.46, c_angstrom=6.70),
 )
 
 # get data
@@ -40,6 +41,11 @@ df_carbon = model.get_cross_section_data()
 # added plotting functionality
 fig = model.plot_xs("imgs/carbon_xs.png")
 ```
+
+The integer `crystal_type` codes are still accepted, but the package now also
+exposes `CrystalStructure` and `UnitCell`. This is the first step toward a more
+general crystal-description API that can support additional crystalline
+structures in future versions.
 
 ![](imgs/carbon_xs.png)
 

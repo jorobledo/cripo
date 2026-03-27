@@ -6,6 +6,7 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 
+from .crystal import CrystalStructure, UnitCell, normalize_crystal_structure
 from .efes import EfesState, efes
 from .facfor import facfor1
 
@@ -29,6 +30,19 @@ class CripoInput:
     points_per_lethargy_decade: int
     electrons_z: int
     neutron_electron_length_fm: float = 0.0013
+    crystal_structure: CrystalStructure | int | str | None = None
+    unit_cell: UnitCell | None = None
+
+    def resolved_crystal_structure(self) -> CrystalStructure:
+        """Return the normalized crystal structure for the current input."""
+        value = self.crystal_structure if self.crystal_structure is not None else self.crystal_type
+        return normalize_crystal_structure(value)
+
+    def resolved_unit_cell(self) -> UnitCell:
+        """Return the unit cell that should be used by the current backend."""
+        if self.unit_cell is not None:
+            return self.unit_cell
+        return UnitCell.from_legacy(self.cell_parameter_a_angstrom, self.cell_parameter_c_angstrom)
 
 
 def _mantissa_from_energy(energy: float) -> float:
@@ -45,6 +59,8 @@ def run_cripo(inputs: CripoInput, output_dir: str | Path = ".") -> dict[str, obj
     Waller factor, Bragg information, and the generated output file paths.
     """
     output_dir = Path(output_dir)
+    structure = inputs.resolved_crystal_structure()
+    unit_cell = inputs.resolved_unit_cell()
     cri_path = output_dir / "CRIPOOUT.CRI"
     dat_path = output_dir / "CRIPOOUT.DAT"
 
@@ -55,8 +71,8 @@ def run_cripo(inputs: CripoInput, output_dir: str | Path = ".") -> dict[str, obj
     isc = 0
     bne = inputs.neutron_electron_length_fm
 
-    a = inputs.cell_parameter_a_angstrom * 1.0e-8
-    c = inputs.cell_parameter_c_angstrom * 1.0e-8
+    a = unit_cell.a_cm
+    c = unit_cell.c_cm
     elim = 1.0e5
     idim = 1000
     il0 = 8
@@ -79,9 +95,9 @@ def run_cripo(inputs: CripoInput, output_dir: str | Path = ".") -> dict[str, obj
             f" - DEBYE TEMPERATURE  = {inputs.debye_temperature:6.1f} - SAMPLE TEMPERATURE = {inputs.temperature:6.1f}\n"
         )
         cri.write(
-            f" PARAMETROS DEL CRISTAL A = {inputs.cell_parameter_a_angstrom:7.5f} , C = {inputs.cell_parameter_c_angstrom:7.5f}"
+            f" PARAMETROS DEL CRISTAL A = {unit_cell.a_angstrom:7.5f} , C = {unit_cell.c_angstrom:7.5f}"
             f" - MASA DEL DISPERSOR EN AMU = {inputs.atomic_mass_amu:8.4f}"
-            f" - LONG.SCATT. N-E = {bne:8.4f} - CRYSTAL TYPE = {inputs.crystal_type:4d}\n\n"
+            f" - LONG.SCATT. N-E = {bne:8.4f} - CRYSTAL TYPE = {structure.legacy_code:4d} ({structure.display_name})\n\n"
         )
         cri.write(
             f"{'':10}ENERGY{'':8}LETARGY{'':7}EL.COH.{'':7}EL.INC.{'':6}INEL.INC.{'':5}INEL.COH."
@@ -101,7 +117,7 @@ def run_cripo(inputs: CripoInput, output_dir: str | Path = ".") -> dict[str, obj
                 ind,
                 idim,
                 elim,
-                inputs.crystal_type,
+                structure.legacy_code,
                 a,
                 c,
                 state,
