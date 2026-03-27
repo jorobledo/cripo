@@ -24,15 +24,13 @@ model = CripoModel(
     sigma_thermal = 0.00353,
     debye_temperature = 1860.0,
     temperature = 293.6,
-    cell_parameter_a_angstrom=2.46,
-    cell_parameter_c_angstrom=6.70,
     atomic_mass_amu=12.0,
-    crystal_type=CrystalStructure.GRAPHITE,
+    crystal_structure=CrystalStructure.GRAPHITE,
+    unit_cell=UnitCell(a_angstrom=2.46, c_angstrom=6.70),
     lowest_lethargy_exponent=-3,
     highest_lethargy_exponent=2,
     points_per_lethargy_decade=50,
     electrons_z=6,
-    unit_cell=UnitCell(a_angstrom=2.46, c_angstrom=6.70),
 )
 
 # get data
@@ -42,11 +40,10 @@ df_carbon = model.get_cross_section_data()
 fig = model.plot_xs("imgs/carbon_xs.png")
 ```
 
-The integer `crystal_type` codes are still accepted, but the package now also
-exposes `CrystalStructure` and `UnitCell`. This is the first step toward a more
-general crystal-description API that can support additional crystalline
-structures in future versions.
-
 ![](imgs/carbon_xs.png)
+
+The package uses `CrystalStructure` and `UnitCell` as its crystal-description
+API. This gives the code a cleaner path toward supporting additional
+crystalline structures in future versions.
 
 A special thanks to R. Granada for the permission to make a Python version of the original CRIPO code available.

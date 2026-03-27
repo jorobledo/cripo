@@ -66,6 +66,11 @@ class CrystalStructure(Enum):
         }
         return labels[self]
 
+    @classmethod
+    def choices(cls) -> list[str]:
+        """Return the available crystal-structure enum names."""
+        return [structure.name for structure in cls]
+
 
 @dataclass(frozen=True)
 class UnitCell:
@@ -77,8 +82,8 @@ class UnitCell:
     """
 
     a_angstrom: float
-    b_angstrom: float | None = None
     c_angstrom: float
+    b_angstrom: float | None = None
     alpha_deg: float = 90.0
     beta_deg: float = 90.0
     gamma_deg: float = 90.0

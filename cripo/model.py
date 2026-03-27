@@ -16,8 +16,9 @@ from .plotter import energy_to_wavelength_angstrom, plot_cross_section_data
 class CripoModel:
     """High-level object-oriented interface for running CRIPO in Python.
 
-    The constructor takes the same physical inputs as the historical CLI. Use
-    :meth:`run` to execute the calculation, :meth:`get_cross_section_data` or
+    The constructor takes the physical inputs required for a CRIPO run, using a
+    modern ``UnitCell`` plus ``CrystalStructure`` description. Use :meth:`run`
+    to execute the calculation, :meth:`get_cross_section_data` or
     :meth:`to_dataframe` to inspect the results, and :meth:`plot_xs` to create
     plots directly from the in-memory data.
     """
@@ -30,26 +31,17 @@ class CripoModel:
         sigma_thermal: float,
         debye_temperature: float,
         temperature: float,
-        cell_parameter_a_angstrom: float,
-        cell_parameter_c_angstrom: float,
         atomic_mass_amu: float,
-        crystal_type: int | str | CrystalStructure,
+        crystal_structure: int | str | CrystalStructure,
+        unit_cell: UnitCell,
         lowest_lethargy_exponent: int,
         highest_lethargy_exponent: int,
         points_per_lethargy_decade: int,
         electrons_z: int,
         neutron_electron_length_fm: float = 0.0013,
-        unit_cell: UnitCell | None = None,
-        crystal_structure: int | str | CrystalStructure | None = None,
     ) -> None:
         """Store the CRIPO inputs for a later calculation run."""
-        structure = normalize_crystal_structure(
-            crystal_structure if crystal_structure is not None else crystal_type
-        )
-        resolved_unit_cell = unit_cell or UnitCell.from_legacy(
-            cell_parameter_a_angstrom,
-            cell_parameter_c_angstrom,
-        )
+        structure = normalize_crystal_structure(crystal_structure)
         self.inputs = CripoInput(
             name=name,
             sigma_incoherent=sigma_incoherent,
@@ -57,17 +49,14 @@ class CripoModel:
             sigma_thermal=sigma_thermal,
             debye_temperature=debye_temperature,
             temperature=temperature,
-            cell_parameter_a_angstrom=cell_parameter_a_angstrom,
-            cell_parameter_c_angstrom=cell_parameter_c_angstrom,
             atomic_mass_amu=atomic_mass_amu,
-            crystal_type=structure.legacy_code,
+            crystal_structure=structure,
+            unit_cell=unit_cell,
             lowest_lethargy_exponent=lowest_lethargy_exponent,
             highest_lethargy_exponent=highest_lethargy_exponent,
             points_per_lethargy_decade=points_per_lethargy_decade,
             electrons_z=electrons_z,
             neutron_electron_length_fm=neutron_electron_length_fm,
-            crystal_structure=structure,
-            unit_cell=resolved_unit_cell,
         )
         self.result: dict[str, object] | None = None
         self.run()

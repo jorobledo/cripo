@@ -21,28 +21,22 @@ class CripoInput:
     sigma_thermal: float
     debye_temperature: float
     temperature: float
-    cell_parameter_a_angstrom: float
-    cell_parameter_c_angstrom: float
     atomic_mass_amu: float
-    crystal_type: int
+    crystal_structure: CrystalStructure | int | str
+    unit_cell: UnitCell
     lowest_lethargy_exponent: int
     highest_lethargy_exponent: int
     points_per_lethargy_decade: int
     electrons_z: int
     neutron_electron_length_fm: float = 0.0013
-    crystal_structure: CrystalStructure | int | str | None = None
-    unit_cell: UnitCell | None = None
 
     def resolved_crystal_structure(self) -> CrystalStructure:
         """Return the normalized crystal structure for the current input."""
-        value = self.crystal_structure if self.crystal_structure is not None else self.crystal_type
-        return normalize_crystal_structure(value)
+        return normalize_crystal_structure(self.crystal_structure)
 
     def resolved_unit_cell(self) -> UnitCell:
         """Return the unit cell that should be used by the current backend."""
-        if self.unit_cell is not None:
-            return self.unit_cell
-        return UnitCell.from_legacy(self.cell_parameter_a_angstrom, self.cell_parameter_c_angstrom)
+        return self.unit_cell
 
 
 def _mantissa_from_energy(energy: float) -> float:
