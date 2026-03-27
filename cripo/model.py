@@ -57,6 +57,7 @@ class CripoModel:
             neutron_electron_length_fm=neutron_electron_length_fm,
         )
         self.result: dict[str, object] | None = None
+        self.run()
         
     def run(self, output_dir: str | Path = ".") -> "CripoModel":
         """Execute the calculation and cache the full result on the instance."""
