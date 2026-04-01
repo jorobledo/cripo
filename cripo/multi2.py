@@ -37,13 +37,16 @@ IWTETR = [4040401, 8040408, 4080408, 8081208, 8040804, 4080808, 8080812, 8160408
 
 
 def _unpack_two_digit_table(rows: list[int]) -> list[int]:
-    """Expand legacy packed two-digit table rows into a flat Python list."""
+    """Expand legacy packed two-digit table rows using the original CS1 layout.
+
+    Fortran ``CS1`` stores four 2-digit entries per integer and extracts them
+    from least-significant to most-significant pairs.
+    """
     values: list[int] = []
     for row in rows:
-        digits = f"{row:d}"
-        if len(digits) % 2 == 1:
-            digits = "0" + digits
-        values.extend(int(digits[i : i + 2]) for i in range(0, len(digits), 2))
+        for pair_index in range(4):
+            divisor = 10 ** (2 * pair_index)
+            values.append((row // divisor) % 100)
     return values
 
 
@@ -202,9 +205,12 @@ def _multi2_cub(a: float, elim: float, indic: int, idim: int, ier: int) -> Multi
         if not _allowed_cubic_index(is_value, indic):
             continue
         multiplicity_index = ICUB_VALUES[is_value - 1]
-        if multiplicity_index >= len(MCUB) or MCUB[multiplicity_index] == 0:
+        if multiplicity_index <= 0 or multiplicity_index > len(MCUB):
             continue
-        _append_peak(energies, weights, is_value * energy_scale, MCUB[multiplicity_index] * weight_scale)
+        multiplicity = MCUB[multiplicity_index - 1]
+        if multiplicity == 0:
+            continue
+        _append_peak(energies, weights, is_value * energy_scale, multiplicity * weight_scale)
         if len(energies) >= idim:
             break
 
