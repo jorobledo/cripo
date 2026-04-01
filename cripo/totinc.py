@@ -20,7 +20,9 @@ class TotincState:
     initialized: bool = False
 
 
-def totinc(e: float, amu: float, debye: float, temp: float, ind: int, state: TotincState) -> tuple[float, int]:
+def totinc(
+    e: float, amu: float, debye: float, temp: float, ind: int, state: TotincState
+) -> tuple[float, int]:
     """Compute the normalized incoherent total scattering term.
 
     The first call initializes the temperature-dependent interpolation table.
@@ -53,8 +55,12 @@ def totinc(e: float, amu: float, debye: float, temp: float, ind: int, state: Tot
                 f[j - 1] += y * coef**i
 
         flim = (amu / (amu + 1.008665)) ** 2
-        b1 = math.log((f[34] - flim) / (f[33] - flim)) / math.log10((TOTINC_B[33] / TOTINC_B[34]) ** 2)
-        a1 = (f[34] - flim) * math.exp(b1 * math.log10(TOTINC_B[34] ** 2 * boltz * debye))
+        b1 = math.log((f[34] - flim) / (f[33] - flim)) / math.log10(
+            (TOTINC_B[33] / TOTINC_B[34]) ** 2
+        )
+        a1 = (f[34] - flim) * math.exp(
+            b1 * math.log10(TOTINC_B[34] ** 2 * boltz * debye)
+        )
         state.f = [math.log10(value) for value in f]
         state.flim = flim
         state.a1 = a1

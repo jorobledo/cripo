@@ -112,13 +112,22 @@ def plot_cross_sections(
 ) -> Path:
     """Read a `.DAT` file and generate a saved cross-section plot from it."""
     data = read_dat(dat_path)
-    return plot_cross_section_data(data, output_path=output_path, include_partials=include_partials, x_axis=x_axis)
+    return plot_cross_section_data(
+        data, output_path=output_path, include_partials=include_partials, x_axis=x_axis
+    )
 
 
 def main() -> None:
     """Command-line entry point retained for direct module execution."""
-    parser = argparse.ArgumentParser(description="Plot CRIPO cross sections from a .DAT output file.")
-    parser.add_argument("dat_path", nargs="?", default="CRIPOOUT.DAT", help="Path to the CRIPO .DAT file.")
+    parser = argparse.ArgumentParser(
+        description="Plot CRIPO cross sections from a .DAT output file."
+    )
+    parser.add_argument(
+        "dat_path",
+        nargs="?",
+        default="CRIPOOUT.DAT",
+        help="Path to the CRIPO .DAT file.",
+    )
     parser.add_argument(
         "-o",
         "--output",

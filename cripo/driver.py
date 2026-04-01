@@ -69,11 +69,18 @@ def run_cripo(inputs: CripoInput, output_dir: str | Path = ".") -> dict[str, obj
     state = EfesState(idim=idim, elim=elim)
     rows: list[dict[str, float]] = []
 
-    with cri_path.open("w", encoding="utf-8") as cri, dat_path.open("w", encoding="utf-8") as dat:
+    with (
+        cri_path.open("w", encoding="utf-8") as cri,
+        dat_path.open("w", encoding="utf-8") as dat,
+    ):
         cri.write("\n" + "*" * 130 + "\n\n")
         cri.write(f"{'':54}ELEMENTO - {inputs.name[:24]}\n")
-        dat.write("    ENERGY        EL.COH.       EL.INC.      INEL.INC.     INEL.COH.     ABSORPTION      TOTAL\n")
-        dat.write("     (EV)         (BARN)        (BARN)        (BARN)        (BARN)        (BARN)        (BARN)\n")
+        dat.write(
+            "    ENERGY        EL.COH.       EL.INC.      INEL.INC.     INEL.COH.     ABSORPTION      TOTAL\n"
+        )
+        dat.write(
+            "     (EV)         (BARN)        (BARN)        (BARN)        (BARN)        (BARN)        (BARN)\n"
+        )
         cri.write(
             f" SIGMA I = {inputs.sigma_incoherent:8.4f} - SIGMA C = {sigc:8.4f} - SIGMA TH = {inputs.sigma_thermal:8.4f}"
             f" - DEBYE TEMPERATURE  = {inputs.debye_temperature:6.1f} - SAMPLE TEMPERATURE = {inputs.temperature:6.1f}\n"
@@ -117,12 +124,18 @@ def run_cripo(inputs: CripoInput, output_dir: str | Path = ".") -> dict[str, obj
             f3 = efe5 * inputs.sigma_incoherent
             f4 = efe5 * sigce
             f5 = efe4 * inputs.sigma_thermal
-            f6 = efe1 * inputs.sigma_incoherent + efe6 * sigce + efe4 * inputs.sigma_thermal
+            f6 = (
+                efe1 * inputs.sigma_incoherent
+                + efe6 * sigce
+                + efe4 * inputs.sigma_thermal
+            )
 
             cri.write(
                 f"{i:6d}{energ:14.6E}{mantissa:11.4f}   {f1:14.6E}{f2:14.6E}{f3:14.6E}{f4:14.6E}{f5:14.6E}{f6:14.6E}\n"
             )
-            dat.write(f"{energ:14.6E}{f1:14.6E}{f2:14.6E}{f3:14.6E}{f4:14.6E}{f5:14.6E}{f6:14.6E}\n")
+            dat.write(
+                f"{energ:14.6E}{f1:14.6E}{f2:14.6E}{f3:14.6E}{f4:14.6E}{f5:14.6E}{f6:14.6E}\n"
+            )
             rows.append(
                 {
                     "energy_ev": energ,
@@ -139,7 +152,9 @@ def run_cripo(inputs: CripoInput, output_dir: str | Path = ".") -> dict[str, obj
 
         cri.write("\n" + "*" * 130 + "\n")
         cri.write(f" FACTOR DE DEBYE-WALLER CALCULADO = {state.fdw:13.6E}\n")
-        cri.write(f" SE CALCULARON {state.idim:4d} CORTES DE BRAGG,CORRESPONDIENDO EL ULTIMO A UNA ENERGIA DE {state.elim:11.4E} EV\n")
+        cri.write(
+            f" SE CALCULARON {state.idim:4d} CORTES DE BRAGG,CORRESPONDIENDO EL ULTIMO A UNA ENERGIA DE {state.elim:11.4E} EV\n"
+        )
 
         bragg_energies = list(state.elcoh_state.raw_a1[:51])
         bragg_jumps = [value * sigc for value in state.elcoh_state.raw_b1[:51]]
@@ -154,7 +169,9 @@ def run_cripo(inputs: CripoInput, output_dir: str | Path = ".") -> dict[str, obj
             for j in range(idx, min(idx + 3, len(bragg_energies))):
                 finf = 0.0 if j == 0 else fulti * eulti / bragg_energies[j]
                 leth = _mantissa_from_energy(bragg_energies[j])
-                chunk.append(f"{j+1:4d}{bragg_energies[j]:10.3E}{leth:7.4f}{finf:10.3E}{bragg_jumps[j]:10.3E} *")
+                chunk.append(
+                    f"{j+1:4d}{bragg_energies[j]:10.3E}{leth:7.4f}{finf:10.3E}{bragg_jumps[j]:10.3E} *"
+                )
                 fulti = bragg_jumps[j]
                 eulti = bragg_energies[j]
             cri.write("".join(chunk) + "\n")

@@ -58,7 +58,7 @@ class CripoModel:
         )
         self.result: dict[str, object] | None = None
         self.run()
-        
+
     def run(self, output_dir: str | Path = ".") -> "CripoModel":
         """Execute the calculation and cache the full result on the instance."""
         self.result = run_cripo(self.inputs, output_dir=output_dir)
@@ -88,7 +88,9 @@ class CripoModel:
         """Return the cross-section data as a pandas ``DataFrame``."""
         data = self.get_cross_section_data()
         frame = pd.DataFrame(data)
-        frame["wavelength_angstrom"] = frame["energy_ev"].map(energy_to_wavelength_angstrom)
+        frame["wavelength_angstrom"] = frame["energy_ev"].map(
+            energy_to_wavelength_angstrom
+        )
         ordered_columns = [
             "energy_ev",
             "wavelength_angstrom",

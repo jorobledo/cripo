@@ -51,7 +51,9 @@ def efes(
     if ier >= 100:
         return (efe1, 0.0, 0.0, 0.0, 0.0, 0.0), ier, state.fdw, idim, elim
 
-    efe2, ier, idim_out, elim_out = elcoh(energ, state.fdw, idim, elim, indic, ind, a, c, state.elcoh_state)
+    efe2, ier, idim_out, elim_out = elcoh(
+        energ, state.fdw, idim, elim, indic, ind, a, c, state.elcoh_state
+    )
     state.idim = idim_out
     state.elim = elim_out
     if ier == 103:

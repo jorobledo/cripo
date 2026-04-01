@@ -63,7 +63,12 @@ def elcoh(
         b1_vals = list(result.b1)
         for i in range(result.idim):
             finf = eulti * fulti / result.a1[i]
-            salto = const1 * b1_vals[i] * math.exp(const2 * result.a1[i]) / math.sqrt(result.a1[i] ** 3)
+            salto = (
+                const1
+                * b1_vals[i]
+                * math.exp(const2 * result.a1[i])
+                / math.sqrt(result.a1[i] ** 3)
+            )
             b1_vals[i] = finf + salto
             eulti = result.a1[i]
             fulti = b1_vals[i]
@@ -81,7 +86,7 @@ def elcoh(
         state.initialized = True
 
     if energ > state.elim:
-        const2 = -(4.3935985e9 ** 2) * state.fdw
+        const2 = -(4.3935985e9**2) * state.fdw
         const3 = const2 * energ
         efe2 = -(1.0 - math.exp(const3)) / const3
         return efe2, state.ier, state.idim, state.elim

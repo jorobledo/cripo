@@ -38,7 +38,7 @@ def facfor(energ: float) -> float:
 
 def facfor1(energ: float, iz: int) -> float:
     """Compute the analytic neutron-electron form-factor approximation."""
-    aq0 = 1.9 * iz ** 0.333333
+    aq0 = 1.9 * iz**0.333333
     akk = 21.968 * math.sqrt(energ)
     axx = 12.0 * (akk / aq0) ** 2
     return 2.0 * (math.sqrt(1.0 + axx) - 1.0) / axx
